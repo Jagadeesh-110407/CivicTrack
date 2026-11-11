@@ -1,0 +1,9 @@
+<?php
+require_once __DIR__.'/config/config.php';require_once __DIR__.'/includes/functions.php';require_login();$errors=[];
+if($_SERVER['REQUEST_METHOD']==='POST'){verify_csrf();$name=trim($_POST['name']??'');$phone=trim($_POST['phone']??'');$pw=$_POST['new_password']??'';
+ if(mb_strlen($name)<2)$errors[]='Name must be at least 2 characters.';
+ if($pw!==''&&strlen($pw)<8)$errors[]='New password must contain at least 8 characters.';
+ if(!$errors){if($pw!=='')$s=$pdo->prepare('UPDATE users SET name=?,phone=?,password_hash=? WHERE id=?');else $s=$pdo->prepare('UPDATE users SET name=?,phone=? WHERE id=?');$args=$pw!==''?[$name,$phone,password_hash($pw,PASSWORD_DEFAULT),(int)current_user()['id']]:[$name,$phone,(int)current_user()['id']];$s->execute($args);$_SESSION['user']['name']=$name;log_audit($pdo,(int)current_user()['id'],'UPDATE_PROFILE','user',(int)current_user()['id']);set_flash('Profile updated.');redirect('profile.php');}}
+$s=$pdo->prepare('SELECT name,email,phone,role FROM users WHERE id=?');$s->execute([(int)current_user()['id']]);$u=$s->fetch();$pageTitle='My profile';require __DIR__.'/includes/header.php';?>
+<div class="auth-wrap"><section class="auth-card"><span class="eyebrow">ACCOUNT SETTINGS</span><h1>My profile</h1><?php foreach($errors as $er):?><div class="alert alert-error"><?=e($er)?></div><?php endforeach;?><form method="post" class="form-stack"><?=csrf_field()?><label>Full name<input name="name" required value="<?=e($u['name'])?>"></label><label>Email<input value="<?=e($u['email'])?>" disabled></label><label>Phone<input name="phone" value="<?=e($u['phone'])?>"></label><label>New password (optional)<input type="password" name="new_password" minlength="8"><small>Leave blank to keep your current password.</small></label><button class="btn btn-block">Save profile</button></form><p class="muted">Account role: <?=e(ucfirst($u['role']))?></p></section></div>
+<?php require __DIR__.'/includes/footer.php';?>

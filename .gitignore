@@ -1,0 +1,7 @@
+/uploads/*
+!/uploads/.htaccess
+/config/local.php
+/config/config.php
+/database/civicTrack.sql
+.env
+*.log

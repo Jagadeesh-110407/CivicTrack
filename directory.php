@@ -1,0 +1,14 @@
+<?php
+require_once __DIR__.'/config/config.php';require_once __DIR__.'/includes/functions.php';
+$search=trim($_GET['q']??'');$status=$_GET['status']??'';$category=(int)($_GET['category']??0);
+$sql="SELECT i.id,i.complaint_code,i.title,i.description,i.status,i.created_at,i.ward_name,d.name district_name,c.name category_name FROM issues i JOIN categories c ON c.id=i.category_id LEFT JOIN districts d ON d.id=i.district_id WHERE i.is_public=1";$params=[];
+if($search!==''){$sql.=" AND (i.title LIKE ? OR i.description LIKE ? OR i.location_text LIKE ?)";$like='%'.$search.'%';array_push($params,$like,$like,$like);}
+if(in_array($status,['pending','under_review','assigned','in_progress','resolved','duplicate','rejected','reopened'],true)){$sql.=" AND i.status=?";$params[]=$status;}
+if($category){$sql.=" AND i.category_id=?";$params[]=$category;}
+$sql.=" ORDER BY i.created_at DESC LIMIT 100";$s=$pdo->prepare($sql);$s->execute($params);$issues=$s->fetchAll();$cats=$pdo->query('SELECT id,name FROM categories WHERE is_active=1 ORDER BY name')->fetchAll();
+$pageTitle='Issue directory';require __DIR__.'/includes/header.php';?>
+<div class="page-heading"><div><span class="eyebrow">PUBLIC ISSUE DIRECTORY</span><h1>Explore reported issues</h1><p class="muted">Public summaries help people understand local concerns. Reporter identity and private details are not shown.</p></div></div>
+<section class="panel"><form method="get" class="filter-bar"><input name="q" placeholder="Search issue or location" value="<?=e($search)?>"><select name="category"><option value="0">All categories</option><?php foreach($cats as $c):?><option value="<?=$c['id']?>" <?=$category===$c['id']?'selected':''?>><?=e($c['name'])?></option><?php endforeach;?></select><select name="status"><option value="">All statuses</option><?php foreach(['pending','under_review','assigned','in_progress','resolved','reopened'] as $st):?><option value="<?=$st?>" <?=$status===$st?'selected':''?>><?=e(status_label($st))?></option><?php endforeach;?></select><button class="btn btn-small">Filter</button></form>
+<div class="issue-grid"><?php foreach($issues as $i):?><article class="issue-card"><div class="issue-card-top"><span class="eyebrow"><?=e($i['category_name'])?></span><span class="status status-<?=e($i['status'])?>"><?=e(status_label($i['status']))?></span></div><h3><?=e($i['title'])?></h3><p><?=e(mb_strimwidth($i['description'],0,130,'…'))?></p><div class="issue-meta"><?=e($i['district_name']??'District not set')?> • <?=e($i['ward_name']?:'Ward not set')?></div><div class="issue-card-bottom"><span class="mono"><?=e($i['complaint_code'])?></span><span><?=e(date('d M Y',strtotime($i['created_at'])))?></span></div></article><?php endforeach;?></div>
+<?php if(!$issues):?><div class="empty-state"><h3>No matching reports</h3><p>Try changing your search filters.</p></div><?php endif;?></section>
+<?php require __DIR__.'/includes/footer.php';?>

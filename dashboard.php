@@ -1,0 +1,11 @@
+<?php
+require_once __DIR__.'/config/config.php';require_once __DIR__.'/includes/functions.php';require_login();
+$uid=(int)current_user()['id'];$s=$pdo->prepare("SELECT COUNT(*) total,SUM(status='pending') pending,SUM(status='resolved') resolved FROM issues WHERE user_id=?");$s->execute([$uid]);$stats=$s->fetch();
+$q=$pdo->prepare("SELECT i.*,c.name category_name FROM issues i JOIN categories c ON c.id=i.category_id WHERE i.user_id=? ORDER BY i.created_at DESC");$q->execute([$uid]);$issues=$q->fetchAll();
+$pageTitle='My dashboard';require __DIR__.'/includes/header.php';?>
+<div class="page-heading"><div><span class="eyebrow">YOUR CIVICTRACK</span><h1>Hello, <?=e(current_user()['name'])?> 👋</h1><p class="muted">Here is an overview of your submitted civic reports.</p></div><a class="btn" href="report.php">＋ Report an issue</a></div>
+<div class="stats-grid dashboard-stats"><div class="stat-card"><strong><?= (int)($stats['total']??0)?></strong><span>Total reports</span></div><div class="stat-card"><strong><?= (int)($stats['pending']??0)?></strong><span>Pending</span></div><div class="stat-card"><strong><?= (int)($stats['resolved']??0)?></strong><span>Resolved</span></div></div>
+<section class="panel"><div class="panel-heading"><div><h2>Your reports</h2><p class="muted">Select a complaint ID to view its timeline.</p></div><a href="directory.php">Browse directory →</a></div>
+<?php if(!$issues):?><div class="empty-state"><div>▤</div><h3>No reports yet</h3><p>When you submit an issue, it will appear here.</p><a class="btn" href="report.php">Submit your first report</a></div>
+<?php else:?><div class="table-wrap"><table><thead><tr><th>Complaint ID</th><th>Issue</th><th>Category</th><th>Date</th><th>Status</th></tr></thead><tbody><?php foreach($issues as $i):?><tr><td><a class="mono" href="track.php?id=<?=(int)$i['id']?>"><?=e($i['complaint_code'])?></a></td><td><?=e($i['title'])?></td><td><?=e($i['category_name'])?></td><td><?=e(date('d M Y',strtotime($i['created_at'])))?></td><td><span class="status status-<?=e($i['status'])?>"><?=e(status_label($i['status']))?></span></td></tr><?php endforeach;?></tbody></table></div><?php endif;?></section>
+<?php require __DIR__.'/includes/footer.php';?>
